@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Para Raquel 💖</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: black;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #mensagem {
+      position: absolute;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
+      font-size: 2em;
+      color: white;
+      text-shadow: 1px 1px 4px black;
+      opacity: 0;
+      transition: opacity 1s;
+    }
+
+    #instrucao {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 1.8em;
+      color: #ffb6c1;
+      text-shadow: 1px 1px 3px #000;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="instrucao">💖 Raquel, tente desenhar um coração 💖</div>
+  <div id="mensagem"></div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+
+    let particles = [];
+    let heartPath = [];
+    let isDrawing = false;
+    const mensagem = document.getElementById('mensagem');
+    const instrucao = document.getElementById('instrucao');
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    document.addEventListener('mousedown', () => {
+      isDrawing = true;
+      heartPath = [];
+      mensagem.style.opacity = 0;
+      ctx.beginPath();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDrawing = false;
+      verificarCoracao();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (isDrawing) {
+        const x = e.clientX;
+        const y = e.clientY;
+        heartPath.push({ x, y });
+
+        if (heartPath.length > 1) {
+          const prev = heartPath[heartPath.length - 2];
+          ctx.strokeStyle = '#ff69b4';
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+    });
+
+    function drawHeart(x, y, size, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(0, -size / 2, -size, -size / 2, -size, 0);
+      ctx.bezierCurveTo(-size, size / 1.5, 0, size, 0, size * 1.5);
+      ctx.bezierCurveTo(0, size, size, size / 1.5, size, 0);
+      ctx.bezierCurveTo(size, -size / 2, 0, -size / 2, 0, 0);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function verificarCoracao() {
+      if (heartPath.length < 30) {
+        mostrarMensagemTriste();
+        return;
+      }
+
+      const centro = heartPath.reduce((acc, p) => {
+        acc.x += p.x;
+        acc.y += p.y;
+        return acc;
+      }, { x: 0, y: 0 });
+
+      centro.x /= heartPath.length;
+      centro.y /= heartPath.length;
+
+      let esquerda = 0, direita = 0, abaixo = 0;
+      for (const p of heartPath) {
+        if (p.x < centro.x) esquerda++;
+        if (p.x > centro.x) direita++;
+        if (p.y > centro.y) abaixo++;
+      }
+
+      const simetria = Math.abs(esquerda - direita) / heartPath.length;
+      const vertical = abaixo / heartPath.length;
+
+      if (simetria < 0.25 && vertical > 0.4) {
+        fixarCoracao();
+        iniciarFogosDeCoracao(centro.x, centro.y);
+        mostrarMensagemFofo();
+      } else {
+        mostrarMensagemTriste();
+      }
+    }
+
+    function fixarCoracao() {
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      for (let i = 0; i < heartPath.length - 1; i++) {
+        const p1 = heartPath[i];
+        const p2 = heartPath[i + 1];
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+      }
+      ctx.stroke();
+    }
+
+    function iniciarFogosDeCoracao(x, y) {
+      let count = 0;
+      const intervalo = setInterval(() => {
+        for (let i = 0; i < 10; i++) {
+          const angle = Math.random() * 2 * Math.PI;
+          const dist = Math.random() * 80;
+          const px = x + Math.cos(angle) * dist;
+          const py = y + Math.sin(angle) * dist;
+          particles.push({ x: px, y: py, size: Math.random() * 10 + 10, life: 50 });
+        }
+        count++;
+        if (count > 10) clearInterval(intervalo);
+      }, 200);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      particles = particles.filter(p => p.life-- > 0);
+      for (const p of particles) {
+        drawHeart(p.x, p.y, p.size, `hsla(${Math.random() * 360}, 100%, 70%, 0.8)`);
+      }
+    }
+    animate();
+
+    function mostrarMensagemFofo() {
+      mensagem.textContent = "Raquel, você conseguiuu! Parabens 💖✨";
+      mensagem.style.opacity = 1;
+      instrucao.style.display = "none";
+    }
+
+    function mostrarMensagemTriste() {
+      mensagem.textContent = "Awn... ainda não foi um coração... continue tentando, Raquel! 💔";
+      mensagem.style.opacity = 1;
+    }
+  </script>
+</body>
+</html>
