@@ -38,6 +38,38 @@
       color: #ffb6c1;
       text-shadow: 1px 1px 3px #000;
     }
+
+    /* Estilo do modal */
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #modal-content {
+      text-align: center;
+      color: white;
+      font-size: 3em;
+      animation: fadeIn 2s;
+    }
+
+    #heart {
+      font-size: 150px;
+      color: #ff69b4;
+      margin-bottom: 30px;
+    }
+
+    /* Animação para o modal */
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -45,24 +77,38 @@
   <div id="instrucao">💖 Raquel, tente desenhar um coração 💖</div>
   <div id="mensagem"></div>
 
+  <!-- Modal -->
+  <div id="modal">
+    <div id="modal-content">
+      <div id="heart">💖</div>
+      <div>Parabéns, você conseguiu!</div>
+    </div>
+  </div>
+
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let width = canvas.width = window.innerWidth;
     let height = canvas.height = window.innerHeight;
 
-    let particles = [];
     let heartPath = [];
     let isDrawing = false;
     const mensagem = document.getElementById('mensagem');
     const instrucao = document.getElementById('instrucao');
+    const modal = document.getElementById('modal');
 
     window.addEventListener('resize', () => {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
     });
 
-    document.addEventListener('mousedown', () => {
+    function getClientCoordinates(e) {
+      const touch = e.touches ? e.touches[0] : e;
+      return { x: touch.clientX, y: touch.clientY };
+    }
+
+    // Eventos para mouse e toque
+    document.addEventListener('mousedown', (e) => {
       isDrawing = true;
       heartPath = [];
       mensagem.style.opacity = 0;
@@ -76,8 +122,39 @@
 
     document.addEventListener('mousemove', (e) => {
       if (isDrawing) {
-        const x = e.clientX;
-        const y = e.clientY;
+        const { x, y } = getClientCoordinates(e);
+        heartPath.push({ x, y });
+
+        if (heartPath.length > 1) {
+          const prev = heartPath[heartPath.length - 2];
+          ctx.strokeStyle = '#ff69b4';
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+    });
+
+    // Para toque
+    document.addEventListener('touchstart', (e) => {
+      isDrawing = true;
+      heartPath = [];
+      mensagem.style.opacity = 0;
+      ctx.beginPath();
+      e.preventDefault();
+    });
+
+    document.addEventListener('touchend', () => {
+      isDrawing = false;
+      verificarCoracao();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+      if (isDrawing) {
+        const { x, y } = getClientCoordinates(e);
         heartPath.push({ x, y });
 
         if (heartPath.length > 1) {
@@ -113,6 +190,7 @@
         return;
       }
 
+      // Calcular o centro do desenho
       const centro = heartPath.reduce((acc, p) => {
         acc.x += p.x;
         acc.y += p.y;
@@ -133,53 +211,22 @@
       const vertical = abaixo / heartPath.length;
 
       if (simetria < 0.25 && vertical > 0.4) {
-        fixarCoracao();
-        iniciarFogosDeCoracao(centro.x, centro.y);
-        mostrarMensagemFofo();
+        mostrarModal();
       } else {
         mostrarMensagemTriste();
       }
     }
 
-    function fixarCoracao() {
-      ctx.strokeStyle = 'red';
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      for (let i = 0; i < heartPath.length - 1; i++) {
-        const p1 = heartPath[i];
-        const p2 = heartPath[i + 1];
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-      }
-      ctx.stroke();
+    function mostrarModal() {
+      // Exibe o modal com animação de coração e mensagem
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 5000); // Modal ficará visível por 5 segundos
     }
-
-    function iniciarFogosDeCoracao(x, y) {
-      let count = 0;
-      const intervalo = setInterval(() => {
-        for (let i = 0; i < 10; i++) {
-          const angle = Math.random() * 2 * Math.PI;
-          const dist = Math.random() * 80;
-          const px = x + Math.cos(angle) * dist;
-          const py = y + Math.sin(angle) * dist;
-          particles.push({ x: px, y: py, size: Math.random() * 10 + 10, life: 50 });
-        }
-        count++;
-        if (count > 10) clearInterval(intervalo);
-      }, 200);
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      particles = particles.filter(p => p.life-- > 0);
-      for (const p of particles) {
-        drawHeart(p.x, p.y, p.size, `hsla(${Math.random() * 360}, 100%, 70%, 0.8)`);
-      }
-    }
-    animate();
 
     function mostrarMensagemFofo() {
-      mensagem.textContent = "Raquel, você conseguiuu! Parabens 💖✨";
+      mensagem.textContent = "Raquel, você conseguiu! 💖✨";
       mensagem.style.opacity = 1;
       instrucao.style.display = "none";
     }
